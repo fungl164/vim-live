@@ -33,31 +33,32 @@ let s:browser_pids_win32 = "for /f \"tokens=4,1*skip=1\" %i in (\'wmic process w
 
 function! s:Init()
     if has('win32')
-        let s:browser_app  = s:browser_app_win32                        " Windows
+        let s:browser_app  = s:browser_app_win32        " Windows
         let s:browser_pids = s:browser_pids_win32
         let s:browser_kill = 'taskkill /PID '
     elseif has('unix')
-        let s:browser_app  = s:browser_app_unix                         " OSX or Linux
+        let s:browser_app  = s:browser_app_unix         " OSX or Linux
         let s:browser_pids = s:browser_pids_unix
         let s:browser_kill = 'kill -15 '
     endif
 endfunction
 call s:Init()
 
-function! s:OpenBrowser(url)
+function! s:OpenBrowser(...)
+    let url = a:0 > 0 ? a:1 : g:default_url             " Set initial url
     if exists('g:live-browser')
-        let s:browser_app = g:live-browser                              " User-defined (determined at runtime)
+        let s:browser_app = g:live-browser              " User-defined (determined at runtime)
     endif
     if !s:IsBrowserRunning()
-        silent exe "!'".s:browser_app."' ".s:browser_args." ".a:url." > /dev/null 2>&1 &" | redraw!
+        silent exe "!'".s:browser_app."' ".s:browser_args." ".url." > /dev/null 2>&1 &" | redraw!
     endif
 endfunction
 
 function! s:CloseBrowser()
-    let l:pids = s:GetBrowserPids()
-    if len(l:pids) > 0
-        silent call system(s:browser_kill.' '.l:pids[0]) | redraw!
-    endif
+    for pid in s:GetBrowserPids()
+        silent call system(s:browser_kill.' '.pid)
+    endfor
+    redraw!
 endfunction
 
 function! s:IsBrowserRunning()
@@ -68,6 +69,10 @@ function! s:GetBrowserPids()
     return split(system(s:browser_pids))
 endfunction
 
+" Register Global defaults
+let g:default_url = "www.google.com"
+
 " Register Commands
 command! -nargs=? LiveBrowserOpen  :call s:OpenBrowser(<f-args>)
 command! -nargs=0 LiveBrowserClose :call s:CloseBrowser()
+command! -nargs=0 LiveBrowserCheck :call s:IsBrowserRunning()
